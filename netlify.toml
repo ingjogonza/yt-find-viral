@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Netlify auto-detects Next.js App Router and applies @netlify/plugin-nextjs
+# (Node.js runtime, correct routing/caching for the App Router, image
+# optimization, etc.) — declared explicitly here so the build is not
+# dependent on auto-detection continuing to work the same way.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

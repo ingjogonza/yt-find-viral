@@ -1,0 +1,113 @@
+// Prisma schema for yt-viral-find
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Channel {
+  id                 String   @id
+  title              String
+  description        String
+  country            String?
+  defaultLanguage    String?
+  subscriberCount    Int
+  totalViews         BigInt
+  videoCount         Int
+  channelPublishedAt DateTime
+  thumbnailUrl       String
+  dominantCategoryId String?
+  firstDiscoveredAt  DateTime @default(now())
+  lastRefreshedAt    DateTime
+
+  // Populated by scripts/discover.ts (Prompt 3), alongside the regular
+  // avgViewsRecent/medianViewsRecent snapshot refresh:
+  // the thumbnail of the highest-viewed sampled upload, and two flags read
+  // directly from the YouTube Data API's videos.list `status` part
+  // (status.madeForKids / status.containsSyntheticMedia) — majority vote
+  // across the sampled uploads. Never inferred from text heuristics.
+  representativeVideoThumbnailUrl String?
+  madeForKids                     Boolean?
+  containsSyntheticMedia          Boolean?
+
+  // Populated by scripts/classify.ts (Prompt 3) via a vision call to Claude
+  // Haiku over representativeVideoThumbnailUrl + title/description. Null
+  // until classifiedAt is set; already-classified channels are never
+  // reclassified (classify.ts only selects classifiedAt IS NULL).
+  format                    String?
+  quality                   String?
+  isFaceless                Boolean?
+  classificationConfidence  Float?
+  classifiedAt              DateTime?
+
+  // Populated by scripts/discover.ts (Prompt 5), from the same sampled
+  // uploads' videos.list call as avgViewsRecent/medianViewsRecent above
+  // (contentDetails.duration added to the existing part list — no extra
+  // quota). tags is the deduplicated union of snippet.tags across the
+  // sampled uploads, capped at 20. hasShorts/totalShortsInSample/
+  // totalLongInSample/avgShortsViews/medianShortsViews are derived from
+  // classifying each sampled video as short/long by contentDetails.duration
+  // (see SHORT_MAX_DURATION_SECONDS in discover.ts).
+  tags                String[] @default([])
+  hasShorts           Boolean?
+  totalShortsInSample Int?
+  totalLongInSample   Int?
+  avgShortsViews      Float?
+  medianShortsViews   Float?
+
+  snapshots ChannelSnapshot[]
+}
+
+model ChannelSnapshot {
+  id                Int      @id @default(autoincrement())
+  channelId         String
+  channel           Channel  @relation(fields: [channelId], references: [id])
+  subscriberCount   Int
+  avgViewsRecent    Float
+  medianViewsRecent Float
+  capturedAt        DateTime @default(now())
+
+  @@index([channelId])
+}
+
+// Favorites (Prompt 7) — one user, so just the channelId for now. Prompt 8
+// (auth) will add a userId column here; deliberately not designed in ahead
+// of time.
+model FavoriteChannel {
+  channelId String   @id
+  addedAt   DateTime @default(now())
+}
+
+// Populated by scripts/track.ts (Prompt 6) — a user-curated watchlist of
+// specific channels (typically competitors), independent of whether the
+// discover.ts crawler ever finds them. No relation to Channel: a channel can
+// be tracked before it exists in the main catalog, and "dejar de seguir"
+// only deletes this row, never the Channel row or its TrackedVideoSnapshots.
+model TrackedChannel {
+  channelId String   @id
+  addedAt   DateTime @default(now())
+}
+
+// One row per (video, tracking run) — a point-in-time view count for a
+// tracked channel's recent upload, captured every scripts/track.ts run. No
+// relation/cascade to TrackedChannel on purpose: snapshots outlive
+// "unfollowing" a channel (see TrackedChannel doc above).
+model TrackedVideoSnapshot {
+  id           Int      @id @default(autoincrement())
+  channelId    String
+  videoId      String
+  title        String
+  thumbnailUrl String
+  publishedAt  DateTime
+  viewCount    Int
+  capturedAt   DateTime @default(now())
+
+  @@index([channelId])
+  @@index([videoId])
+}
