@@ -173,6 +173,7 @@ export async function fetchRecentUploadVideoIds(
  */
 export type ChannelUpsertExtras = {
   representativeVideoThumbnailUrl?: string;
+  representativeVideoId?: string;
   madeForKids?: boolean;
   containsSyntheticMedia?: boolean;
   dominantCategoryId?: string;

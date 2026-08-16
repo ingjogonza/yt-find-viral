@@ -90,6 +90,7 @@ type YouTubeVideosListResponse = {
  * — no extra API call, just extra parts on the existing request).
  */
 type VideoDetail = {
+  videoId: string;
   viewCount: number;
   thumbnailUrl: string;
   madeForKids: boolean | undefined;
@@ -231,6 +232,7 @@ async function fetchVideoDetails(videoIds: string[], apiKey: string): Promise<Vi
     );
     for (const item of data.items ?? []) {
       details.push({
+        videoId: item.id,
         viewCount: Number(item.statistics?.viewCount ?? 0),
         thumbnailUrl: pickThumbnailUrl(item.snippet?.thumbnails),
         madeForKids: item.status?.madeForKids,
@@ -256,13 +258,15 @@ function majorityFlag(details: VideoDetail[], flag: "madeForKids" | "containsSyn
   return trueCount > details.length / 2;
 }
 
-/** The thumbnail of the video with the most views among the sampled ones. */
-function pickRepresentativeThumbnail(details: VideoDetail[]): string | undefined {
-  if (details.length === 0) return undefined;
+/** The thumbnail + id of the video with the most views among the sampled ones. */
+function pickRepresentativeVideo(
+  details: VideoDetail[],
+): { thumbnailUrl: string | undefined; videoId: string | undefined } {
+  if (details.length === 0) return { thumbnailUrl: undefined, videoId: undefined };
   const mostViewed = details.reduce((best, current) =>
     current.viewCount > best.viewCount ? current : best,
   );
-  return mostViewed.thumbnailUrl || undefined;
+  return { thumbnailUrl: mostViewed.thumbnailUrl || undefined, videoId: mostViewed.videoId };
 }
 
 /**
@@ -393,6 +397,7 @@ async function run(prisma: PrismaClient): Promise<RunSummary> {
           id: true,
           lastRefreshedAt: true,
           representativeVideoThumbnailUrl: true,
+          representativeVideoId: true,
           dominantCategoryId: true,
           hasShorts: true,
         },
@@ -406,14 +411,21 @@ async function run(prisma: PrismaClient): Promise<RunSummary> {
     if (!existing) return true; // new channel
     const isStale = existing.lastRefreshedAt < staleCutoff;
     // Permanent safety net (not a one-time backfill): always re-take a
-    // channel whose representativeVideoThumbnailUrl, dominantCategoryId, or
-    // hasShorts is still null — covers both the Prompt 1 -> Prompt 3/5
-    // backfill gaps and any future run where these couldn't be computed
-    // (e.g. 0 sampled uploads).
+    // channel whose representativeVideoThumbnailUrl, representativeVideoId,
+    // dominantCategoryId, or hasShorts is still null — covers both the
+    // Prompt 1 -> Prompt 3/5/9 backfill gaps and any future run where these
+    // couldn't be computed (e.g. 0 sampled uploads).
     const missingRepresentativeThumbnail = existing.representativeVideoThumbnailUrl == null;
+    const missingRepresentativeVideoId = existing.representativeVideoId == null;
     const missingDominantCategory = existing.dominantCategoryId == null;
     const missingShortsInfo = existing.hasShorts == null;
-    return isStale || missingRepresentativeThumbnail || missingDominantCategory || missingShortsInfo;
+    return (
+      isStale ||
+      missingRepresentativeThumbnail ||
+      missingRepresentativeVideoId ||
+      missingDominantCategory ||
+      missingShortsInfo
+    );
   });
 
   // --- Step 3: for each batch, fetch channel metadata, then per-channel
@@ -450,7 +462,8 @@ async function run(prisma: PrismaClient): Promise<RunSummary> {
 
       const avgViewsRecent = average(viewCounts);
       const medianViewsRecent = median(viewCounts);
-      const representativeVideoThumbnailUrl = pickRepresentativeThumbnail(videoDetails);
+      const { thumbnailUrl: representativeVideoThumbnailUrl, videoId: representativeVideoId } =
+        pickRepresentativeVideo(videoDetails);
       const madeForKids = majorityFlag(videoDetails, "madeForKids");
       const containsSyntheticMedia = majorityFlag(videoDetails, "containsSyntheticMedia");
       const dominantCategoryId = pickDominantCategoryId(videoDetails);
@@ -461,6 +474,7 @@ async function run(prisma: PrismaClient): Promise<RunSummary> {
 
       await upsertChannel(prisma, meta, {
         representativeVideoThumbnailUrl,
+        representativeVideoId,
         madeForKids,
         containsSyntheticMedia,
         dominantCategoryId,

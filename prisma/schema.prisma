@@ -36,6 +36,11 @@ model Channel {
   madeForKids                     Boolean?
   containsSyntheticMedia          Boolean?
 
+  // Populated by scripts/discover.ts alongside representativeVideoThumbnailUrl
+  // above (same sampled video, same videos.list call — item.id, no extra
+  // quota). Lets the UI link straight to that video on YouTube.
+  representativeVideoId String?
+
   // Populated by scripts/classify.ts (Prompt 3) via a vision call to Claude
   // Haiku over representativeVideoThumbnailUrl + title/description. Null
   // until classifiedAt is set; already-classified channels are never

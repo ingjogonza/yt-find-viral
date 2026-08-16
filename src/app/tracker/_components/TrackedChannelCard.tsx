@@ -20,19 +20,33 @@ function formatDate(date: Date): string {
 function VideoRow({ video, isMostExplosive }: { video: TrackedVideoView; isMostExplosive: boolean }) {
   return (
     <li className="flex items-center gap-3 py-2">
-      {/* eslint-disable-next-line @next/next/no-img-element -- plain <img> avoids
-          configuring next/image remote-domain allowlisting for YouTube's
-          thumbnail hosts, same convention as ShortsResultsTable. */}
-      <img
-        src={video.thumbnailUrl}
-        alt=""
-        width={80}
-        height={45}
-        loading="lazy"
-        className="h-[45px] w-20 shrink-0 rounded object-cover"
-      />
+      <a
+        href={`https://www.youtube.com/watch?v=${video.videoId}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="shrink-0"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- plain <img> avoids
+            configuring next/image remote-domain allowlisting for YouTube's
+            thumbnail hosts, same convention as ShortsResultsTable. */}
+        <img
+          src={video.thumbnailUrl}
+          alt=""
+          width={80}
+          height={45}
+          loading="lazy"
+          className="h-[45px] w-20 shrink-0 rounded object-cover"
+        />
+      </a>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-gray-900">{video.title}</p>
+        <a
+          href={`https://www.youtube.com/watch?v=${video.videoId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block truncate text-sm font-medium text-gray-900 hover:underline"
+        >
+          {video.title}
+        </a>
         <p className="text-xs text-gray-500">
           Publicado {formatDate(video.publishedAt)} · {formatNumber(video.currentViewCount)} vistas
         </p>
@@ -78,7 +92,12 @@ export function TrackedChannelCard({ channel, isFavorite }: TrackedChannelCardPr
         <FavoriteButton channelId={channel.channelId} isFavorite={isFavorite} />
       </div>
       <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 pr-10">
-        <div className="flex items-center gap-3">
+        <a
+          href={`https://www.youtube.com/channel/${channel.channelId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 hover:underline"
+        >
           {channel.thumbnailUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- see VideoRow above
             <img
@@ -100,7 +119,7 @@ export function TrackedChannelCard({ channel, isFavorite }: TrackedChannelCardPr
                 : "Esperando la primera corrida del tracker"}
             </p>
           </div>
-        </div>
+        </a>
         <span className="text-xs text-gray-400 group-open:hidden">Ver videos ▾</span>
       </summary>
 

@@ -29,6 +29,7 @@ export type ViralChannel = {
   id: string;
   title: string;
   thumbnailUrl: string;
+  representativeVideoId: string | null;
   subscriberCount: number;
   avgViewsRecent: number;
   daysSinceStart: number;
@@ -41,6 +42,7 @@ type ChannelWithLatestSnapshot = {
   title: string;
   thumbnailUrl: string;
   representativeVideoThumbnailUrl: string | null;
+  representativeVideoId: string | null;
   subscriberCount: number;
   channelPublishedAt: Date;
   format: string | null;
@@ -67,6 +69,7 @@ export async function loadViralChannels(prisma: PrismaClient): Promise<ViralChan
       title: true,
       thumbnailUrl: true,
       representativeVideoThumbnailUrl: true,
+      representativeVideoId: true,
       subscriberCount: true,
       channelPublishedAt: true,
       format: true,
@@ -93,6 +96,7 @@ export async function loadViralChannels(prisma: PrismaClient): Promise<ViralChan
       id: channel.id,
       title: channel.title,
       thumbnailUrl: channel.representativeVideoThumbnailUrl ?? channel.thumbnailUrl,
+      representativeVideoId: channel.representativeVideoThumbnailUrl ? channel.representativeVideoId : null,
       subscriberCount: channel.subscriberCount,
       avgViewsRecent: channel.snapshots[0].avgViewsRecent,
       daysSinceStart: daysSince(channel.channelPublishedAt),

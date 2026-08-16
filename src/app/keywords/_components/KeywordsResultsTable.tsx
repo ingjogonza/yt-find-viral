@@ -66,7 +66,12 @@ export function KeywordsResultsTable({ rows, query, favoriteChannelIds }: Keywor
                   <FavoriteButton channelId={row.id} isFavorite={favoriteChannelIds.has(row.id)} />
                 </td>
                 <td className="px-3 py-2">
-                  <div className="flex items-center gap-2">
+                  <a
+                    href={`https://www.youtube.com/channel/${row.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 hover:underline"
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element -- plain <img>
                         avoids configuring next/image remote-domain allowlisting for
                         YouTube's thumbnail hosts, out of scope for this prompt. */}
@@ -79,7 +84,7 @@ export function KeywordsResultsTable({ rows, query, favoriteChannelIds }: Keywor
                       className="h-10 w-10 rounded-full object-cover"
                     />
                     <span className="font-medium text-gray-900">{row.title}</span>
-                  </div>
+                  </a>
                 </td>
                 <td className="px-3 py-2 text-gray-600">{categoryLabel(row.dominantCategoryId)}</td>
                 <td className="px-3 py-2 text-gray-600">{row.country ?? "—"}</td>
